@@ -146,12 +146,12 @@
     .move-empty { font-size: 13px; color: var(--text-muted); padding: 24px 0; text-align: center; }
     .move-room-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; min-height: 46px; transition: border-color 0.12s, background 0.12s; }
     .move-room-row.drop-active { border-color: var(--accent); background: rgba(91,141,238,0.07); }
-    .move-room-header { display: flex; align-items: center; gap: 12px; }
-    .move-room-name { font-size: 13px; font-weight: 500; min-width: 96px; flex-shrink: 0; }
-    .move-chips { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-    .move-chip { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
-    .move-chip-name { font-weight: 500; flex: 1; }
-    .move-chip-cat { font-size: 11px; color: var(--text-muted); }
+    .move-room-header { display: flex; align-items: center; gap: 10px; }
+    .move-room-name { font-size: 13px; font-weight: 500; }
+    .move-chips { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+    .move-chip { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; }
+    .move-chip-name { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .move-chip-cat { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
     .move-drop-hint { font-size: 11px; color: var(--text-muted); opacity: 0.4; }
     .move-saving { font-size: 11px; color: var(--accent); }
     .move-drag-ghost { position: fixed; pointer-events: none; z-index: 999; background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 7px 12px; font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; display: none; }
@@ -847,7 +847,7 @@
         const chips = row.querySelector('.move-chips');
         const chip = document.createElement('div');
         chip.className = 'move-chip';
-        chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><div class="move-item-info"><div class="move-item-name">${escHtml(item.name)}</div><div class="move-item-meta">${escHtml(item.category)}</div></div>`;
+        chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><span class="move-chip-name">${escHtml(item.name)}</span><span class="move-chip-cat">${escHtml(item.category)}</span>`;
         chips.appendChild(chip);
 
         // Saving indicator in header
@@ -856,7 +856,6 @@
         saving.className = 'move-saving';
         saving.textContent = 'Saving...';
         header.appendChild(saving);
-
         apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr])
           .then(() => {
             saving.remove();
