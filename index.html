@@ -130,6 +130,32 @@
     #qr-reader { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
     .scan-found { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 13px; margin-top: 12px; }
 
+    /* MOVE VIEW */
+    .move-layout { display: flex; gap: 20px; min-height: 500px; }
+    .move-col { flex: 1; display: flex; flex-direction: column; }
+    .move-col-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .move-list { display: flex; flex-direction: column; gap: 6px; }
+    .move-item { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: grab; user-select: none; transition: opacity 0.15s, border-color 0.15s; }
+    .move-item:hover { border-color: var(--accent); }
+    .move-item:active { cursor: grabbing; }
+    .move-item.is-dragging { opacity: 0.25; }
+    .move-drag-handle { color: var(--text-muted); font-size: 13px; flex-shrink: 0; }
+    .move-item-info { flex: 1; min-width: 0; }
+    .move-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .move-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .move-empty { font-size: 13px; color: var(--text-muted); padding: 24px 0; text-align: center; }
+    .move-room-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; min-height: 46px; transition: border-color 0.12s, background 0.12s; }
+    .move-room-row.drop-active { border-color: var(--accent); background: rgba(91,141,238,0.07); }
+    .move-room-header { display: flex; align-items: center; gap: 12px; }
+    .move-room-name { font-size: 13px; font-weight: 500; min-width: 96px; flex-shrink: 0; }
+    .move-chips { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .move-chip { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+    .move-chip-name { font-weight: 500; flex: 1; }
+    .move-chip-cat { font-size: 11px; color: var(--text-muted); }
+    .move-drop-hint { font-size: 11px; color: var(--text-muted); opacity: 0.4; }
+    .move-saving { font-size: 11px; color: var(--accent); }
+    .move-drag-ghost { position: fixed; pointer-events: none; z-index: 999; background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 7px 12px; font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; display: none; }
+
     /* MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
@@ -169,6 +195,7 @@
     <button class="active" onclick="switchTab('inventory', this)">Inventory</button>
     <button onclick="switchTab('add', this)">Add Item</button>
     <button onclick="switchTab('scan', this)">Scan Barcode</button>
+    <button onclick="switchTab('move', this)">Move Items</button>
   </nav>
 
   <!-- INVENTORY -->
@@ -180,7 +207,7 @@
         <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
         <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
         <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
-        <option>Geymsla</option><option>Annað</option>
+        <option>Annað</option>
       </select>
       <select id="filter-category" onchange="filterInventory()">
         <option value="">All Categories</option>
@@ -249,7 +276,7 @@
           <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
           <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
           <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
-          <option>Geymsla</option><option>Annað</option>
+          <option>Annað</option>
         </select>
       </div>
       <div class="form-group">
@@ -286,7 +313,33 @@
   </div>
 </div>
 
-<!-- EDIT MODAL -->
+  <!-- MOVE ITEMS -->
+  <div id="view-move" class="view">
+    <div class="view-title">Move Items</div>
+    <div class="move-layout">
+      <div class="move-col">
+        <div class="move-col-label">Items</div>
+        <div class="move-list" id="move-item-list"></div>
+      </div>
+      <div class="move-col">
+        <div class="move-col-label">Rooms</div>
+        <div id="move-room-list">
+          <div class="move-room-row" data-room="Háteigur"><div class="move-room-header"><span class="move-room-name">Háteigur</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Hvammur"><div class="move-room-header"><span class="move-room-name">Hvammur</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Gallerí"><div class="move-room-header"><span class="move-room-name">Gallerí</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Huginn"><div class="move-room-header"><span class="move-room-name">Huginn</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Muninn"><div class="move-room-header"><span class="move-room-name">Muninn</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Ásgarður"><div class="move-room-header"><span class="move-room-name">Ásgarður</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Útgarður"><div class="move-room-header"><span class="move-room-name">Útgarður</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Setur"><div class="move-room-header"><span class="move-room-name">Setur</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Brasserie"><div class="move-room-header"><span class="move-room-name">Brasserie</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+          <div class="move-room-row" data-room="Annað"><div class="move-room-header"><span class="move-room-name">Annað</span><span class="move-drop-hint">Drop here</span></div><div class="move-chips"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 <div class="modal-overlay" id="edit-modal" onclick="handleModalClick(event)">
   <div class="modal">
     <div class="modal-header">
@@ -312,7 +365,7 @@
         <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
         <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
         <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
-        <option>Geymsla</option><option>Annað</option>
+        <option>Annað</option>
       </select>
     </div>
     <div class="form-group">
@@ -331,12 +384,14 @@
   </div>
 </div>
 
+<div class="move-drag-ghost" id="move-ghost"></div>
+
 <script>
   const CLIENT_ID  = '1090619255769-o3fou27inh0oo3llbgi03m5docj10qnb.apps.googleusercontent.com';
   const SHEET_ID   = '1y7h3nNYMehxyjbvHFloS3_zQWaLH_QsK40Zfm6bWHtY';
   const SHEET_NAME = 'Sheet1';
   const SCOPE      = 'https://www.googleapis.com/auth/spreadsheets';
-  const ROOMS      = ['Háteigur','Hvammur','Gallerí','Huginn','Muninn','Ásgarður','Útgarður','Setur','Brasserie','Geymsla','Annað'];
+  const ROOMS      = ['Háteigur','Hvammur','Gallerí','Huginn','Muninn','Ásgarður','Útgarður','Setur','Brasserie','Annað'];
 
   let accessToken   = null;
   let inventory     = [];
@@ -661,7 +716,13 @@
     btn.classList.add('active');
     if (tab === 'scan') startScanner();
     else stopScanner();
+    if (tab === 'move') renderMoveView();
   }
+
+  document.addEventListener('dragover', e => {
+    moveGhost.style.left = (e.clientX + 14) + 'px';
+    moveGhost.style.top  = (e.clientY - 16) + 'px';
+  });
 
   function startScanner() {
     if (qrScanner) return;
@@ -709,6 +770,105 @@
     document.getElementById('qr-reader').innerHTML = '';
     qrScanner = null;
     startScanner();
+  }
+
+  // ── MOVE ITEMS ────────────────────────────────────────
+
+  let moveDragItem = null; // { id, name, category, room, sheetRow, el }
+  const moveGhost  = document.getElementById('move-ghost');
+
+  function renderMoveView() {
+    const list = document.getElementById('move-item-list');
+    list.innerHTML = '';
+
+    // Reset all room rows
+    document.querySelectorAll('.move-room-row').forEach(row => {
+      const chips = row.querySelector('.move-chips');
+      chips.innerHTML = '<span class="move-drop-hint">Drop here</span>';
+      row.classList.remove('drop-active');
+    });
+
+    if (!inventory.length) {
+      list.innerHTML = '<div class="move-empty">No items in inventory</div>';
+      return;
+    }
+
+    inventory.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'move-item';
+      el.draggable = true;
+      el.dataset.sheetRow = item.sheetRow;
+      el.innerHTML = `
+        <span class="move-drag-handle">&#8942;&#8942;</span>
+        <div class="move-item-info">
+          <div class="move-item-name">${escHtml(item.name)}</div>
+          <div class="move-item-meta">${escHtml(item.category)} &middot; currently in ${escHtml(item.room || '—')}</div>
+        </div>`;
+
+      el.addEventListener('dragstart', e => {
+        moveDragItem = { ...item, el };
+        el.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        moveGhost.textContent = item.name;
+        moveGhost.style.display = 'block';
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('is-dragging');
+        moveGhost.style.display = 'none';
+      });
+
+      list.appendChild(el);
+    });
+
+    // Room drop zones
+    document.querySelectorAll('.move-room-row').forEach(row => {
+      row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drop-active'); });
+      row.addEventListener('dragleave', () => row.classList.remove('drop-active'));
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        row.classList.remove('drop-active');
+        if (!moveDragItem) return;
+
+        const newRoom = row.dataset.room;
+        const item    = moveDragItem;
+        moveDragItem  = null;
+
+        // Remove from left list
+        item.el.remove();
+        if (!document.getElementById('move-item-list').children.length) {
+          document.getElementById('move-item-list').innerHTML = '<div class="move-empty">All items placed</div>';
+        }
+
+        // Hide drop hint
+        const hint = row.querySelector('.move-drop-hint');
+        if (hint) hint.style.display = 'none';
+
+        // Add full item row to chips area
+        const chips = row.querySelector('.move-chips');
+        const chip = document.createElement('div');
+        chip.className = 'move-chip';
+        chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><div class="move-item-info"><div class="move-item-name">${escHtml(item.name)}</div><div class="move-item-meta">${escHtml(item.category)}</div></div>`;
+        chips.appendChild(chip);
+
+        // Saving indicator in header
+        const header = row.querySelector('.move-room-header');
+        const saving = document.createElement('span');
+        saving.className = 'move-saving';
+        saving.textContent = 'Saving...';
+        header.appendChild(saving);
+
+        apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr])
+          .then(() => {
+            saving.remove();
+            const inv = inventory.find(i => i.sheetRow === item.sheetRow);
+            if (inv) inv.room = newRoom;
+          })
+          .catch(() => {
+            saving.textContent = 'Save failed';
+            saving.style.color = 'var(--broken)';
+          });
+      });
+    });
   }
 
   // ── UTILITIES ─────────────────────────────────────────
