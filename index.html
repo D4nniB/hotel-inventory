@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Inventory — Hótel Reykjavík Grand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #0e0f13;
+      --surface: #16181f;
+      --surface2: #1e2028;
+      --border: #2a2d38;
+      --accent: #5b8dee;
+      --accent-dim: rgba(91,141,238,0.12);
+      --text: #e8eaf0;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      --new: #34d399;
+      --new-bg: rgba(52,211,153,0.1);
+      --good: #60a5fa;
+      --good-bg: rgba(96,165,250,0.1);
+      --fair: #fbbf24;
+      --fair-bg: rgba(251,191,36,0.1);
+      --broken: #f87171;
+      --broken-bg: rgba(248,113,113,0.1);
+      --radius: 6px;
+      --font: 'IBM Plex Sans', sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+    /* ─── LOGIN ─── */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; gap: 32px;
+    }
+    .login-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 48px; text-align: center; width: 360px;
+    }
+    .login-logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 24px; }
+    .login-box h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    .login-box p { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; }
+
+    /* ─── APP SHELL ─── */
+    #app { display: none; min-height: 100vh; }
+
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    .header-logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; }
+    .header-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .header-sep { color: var(--border); }
+
+    nav {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 28px; display: flex; gap: 0;
+    }
+    nav button {
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+      font-family: var(--font); font-size: 13px; font-weight: 500;
+      padding: 14px 18px; border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    nav button:hover { color: var(--text); }
+    nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ─── VIEWS ─── */
+    .view { display: none; padding: 28px; max-width: 1100px; margin: 0 auto; }
+    .view.active { display: block; }
+    .view-title { font-size: 18px; font-weight: 600; margin-bottom: 24px; }
+
+    /* ─── TOOLBAR ─── */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+    .toolbar-right { margin-left: auto; display: flex; gap: 10px; }
+
+    input[type=text], select {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-family: var(--font); font-size: 13px;
+      padding: 8px 12px; outline: none; transition: border-color 0.15s;
+    }
+    input[type=text]:focus, select:focus { border-color: var(--accent); }
+    input[type=text]::placeholder { color: var(--text-muted); }
+    select option { background: var(--surface2); }
+
+    .search-input { min-width: 240px; }
+
+    /* ─── TABLE ─── */
+    .table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--surface2); color: var(--text-muted); font-size: 11px;
+      font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    td { padding: 13px 16px; font-size: 13px; }
+    td.id-col { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 13px; }
+
+    /* ─── BADGES ─── */
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 10px;
+      border-radius: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+    }
+    .badge-new     { background: var(--new-bg);    color: var(--new); }
+    .badge-good    { background: var(--good-bg);   color: var(--good); }
+    .badge-fair    { background: var(--fair-bg);   color: var(--fair); }
+    .badge-broken  { background: var(--broken-bg); color: var(--broken); }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border: none; border-radius: var(--radius);
+      font-family: var(--font); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.15s, background 0.15s; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger    { background: rgba(248,113,113,0.15); color: var(--broken); border: 1px solid rgba(248,113,113,0.2); }
+    .btn-ghost     { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ─── FORM CARD ─── */
+    .form-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 28px; max-width: 480px;
+    }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 7px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .form-card input[type=text], .form-card select { width: 100%; }
+    .form-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+    /* ─── QR DISPLAY ─── */
+    #qr-display {
+      display: none; margin-top: 24px; padding: 20px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+    }
+    #qr-display p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+    #qr-canvas canvas, #qr-canvas img { border-radius: 4px; display: block; }
+    #qr-id-label { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+    /* ─── SCAN ─── */
+    .scan-wrap { max-width: 480px; }
+    #qr-reader { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+    #qr-reader video { border-radius: 8px; }
+    #qr-result { margin-top: 16px; }
+    .scan-found {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; font-size: 13px;
+    }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 28px; width: 440px; max-width: 95vw;
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .modal-header h2 { font-size: 16px; font-weight: 600; }
+    .modal-id { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .modal .form-group { margin-bottom: 16px; }
+    .modal input[type=text], .modal select { width: 100%; }
+    .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .modal-footer-right { display: flex; gap: 8px; }
+
+    /* ─── SIGN OUT ─── */
+    .btn-signout {
+      background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+      padding: 6px 12px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font); font-size: 12px; transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-signout:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ─── COUNT ─── */
+    .item-count { font-size: 12px; color: var(--text-muted); align-self: center; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Hótel Reykjavík Grand</div>
+    <h1>Tech Inventory</h1>
+    <p>Sign in with the hotel Google account to continue</p>
+    <button class="btn btn-primary" style="width:100%" onclick="signIn()">Sign in with Google</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <span class="header-logo">HRG</span>
+      <span class="header-sep">/</span>
+      <span class="header-title">Tech Inventory</span>
+    </div>
+    <button class="btn-signout" onclick="signOut()">Sign out</button>
+  </header>
+
+  <nav>
+    <button class="active" onclick="switchTab('inventory', this)">Inventory</button>
+    <button onclick="switchTab('add', this)">Add Item</button>
+    <button onclick="switchTab('scan', this)">Scan QR</button>
+  </nav>
+
+  <!-- INVENTORY -->
+  <div id="view-inventory" class="view active">
+    <div class="toolbar">
+      <input type="text" class="search-input" id="search-input" placeholder="Search by name or category..." oninput="filterInventory()">
+      <select id="filter-room" onchange="filterInventory()">
+        <option value="">All Rooms</option>
+        <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
+        <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
+        <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
+        <option>Geymsla</option><option>Annað</option>
+      </select>
+      <select id="filter-condition" onchange="filterInventory()">
+        <option value="">All Conditions</option>
+        <option>New</option><option>Good</option><option>Fair</option><option>Broken</option>
+      </select>
+      <span class="item-count" id="item-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Room</th>
+            <th>Condition</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-body">
+          <tr><td colspan="5" class="empty-state">Loading inventory...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADD ITEM -->
+  <div id="view-add" class="view">
+    <div class="view-title">Add New Item</div>
+    <div class="form-card">
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="add-name" placeholder="e.g. HDMI Cable 5m">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="add-category" placeholder="e.g. Cable, Camera, Switch, Adapter...">
+      </div>
+      <div class="form-group">
+        <label>Room / Location</label>
+        <select id="add-room">
+          <option value="">Select room...</option>
+          <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
+          <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
+          <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
+          <option>Geymsla</option><option>Annað</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Condition</label>
+        <select id="add-condition">
+          <option value="">Select condition...</option>
+          <option>New</option><option>Good</option><option>Fair</option><option>Broken</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addItem()">Add Item &amp; Generate QR</button>
+      </div>
+    </div>
+
+    <div id="qr-display">
+      <p>QR code generated — print and attach to the item.</p>
+      <div id="qr-canvas"></div>
+      <div id="qr-id-label"></div>
+      <div style="margin-top:14px; display:flex; gap:8px;">
+        <button class="btn btn-secondary" onclick="printQR()">Print QR Code</button>
+        <button class="btn btn-ghost" onclick="addAnother()">Add Another Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN -->
+  <div id="view-scan" class="view">
+    <div class="view-title">Scan QR Code</div>
+    <div class="scan-wrap">
+      <div id="qr-reader"></div>
+      <div id="qr-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal" onclick="handleModalClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modal-item-name">Edit Item</h2>
+        <div class="modal-id" id="modal-item-id"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Item Name</label>
+      <input type="text" id="modal-name">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <input type="text" id="modal-category">
+    </div>
+    <div class="form-group">
+      <label>Room / Location</label>
+      <select id="modal-room">
+        <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
+        <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
+        <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
+        <option>Geymsla</option><option>Annað</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Condition</label>
+      <select id="modal-condition">
+        <option>New</option><option>Good</option><option>Fair</option><option>Broken</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteItem()">Delete Item</button>
+      <div class="modal-footer-right">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveItem()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CLIENT_ID  = '1090619255769-o3fou27inh0oo3llbgi03m5docj10qnb.apps.googleusercontent.com';
+  const SHEET_ID   = '1y7h3nNYMehxyjbvHFloS3_zQWaLH_QsK40Zfm6bWHtY';
+  const SHEET_NAME = 'Sheet1';
+  const SCOPE      = 'https://www.googleapis.com/auth/spreadsheets';
+
+  let accessToken  = null;
+  let inventory    = [];
+  let editingRow   = null;
+  let qrScanner    = null;
+  let lastAddedId  = null;
+  let lastAddedName = null;
+
+  // ── AUTH ──────────────────────────────────────────────
+
+  function signIn() {
+    google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+      callback: async (res) => {
+        if (res.error) { alert('Sign-in failed: ' + res.error); return; }
+        accessToken = res.access_token;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        await loadInventory();
+      }
+    }).requestAccessToken();
+  }
+
+  function signOut() {
+    google.accounts.oauth2.revoke(accessToken, () => {
+      accessToken = null;
+      inventory = [];
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    });
+  }
+
+  // ── SHEETS API ────────────────────────────────────────
+
+  async function apiGet(range) {
+    const r = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    return r.json();
+  }
+
+  async function apiAppend(values) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME + '!A:F')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [values] })
+      }
+    );
+  }
+
+  async function apiUpdate(row, values) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME + '!A' + row + ':F' + row)}?valueInputOption=RAW`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [values] })
+      }
+    );
+  }
+
+  async function apiDeleteRow(row) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            deleteDimension: {
+              range: { sheetId: 0, dimension: 'ROWS', startIndex: row - 1, endIndex: row }
+            }
+          }]
+        })
+      }
+    );
+  }
+
+  // ── INVENTORY ─────────────────────────────────────────
+
+  async function loadInventory() {
+    const data = await apiGet(SHEET_NAME + '!A:F');
+    const rows = (data.values || []).slice(1); // skip header
+    inventory = rows.map((row, i) => ({
+      sheetRow:  i + 2,
+      id:        row[0] || '',
+      name:      row[1] || '',
+      category:  row[2] || '',
+      room:      row[3] || '',
+      condition: row[4] || '',
+      qr:        row[5] || ''
+    }));
+    filterInventory();
+  }
+
+  function renderInventory(items) {
+    const tbody = document.getElementById('inventory-body');
+    document.getElementById('item-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No items found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(item => {
+      const cond = (item.condition || '').toLowerCase();
+      return `
+        <tr onclick="openModal(${item.sheetRow})">
+          <td class="id-col">${escHtml(item.id)}</td>
+          <td>${escHtml(item.name)}</td>
+          <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
+          <td>${escHtml(item.room)}</td>
+          <td><span class="badge badge-${cond}">${escHtml(item.condition)}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function filterInventory() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const room   = document.getElementById('filter-room').value;
+    const cond   = document.getElementById('filter-condition').value;
+
+    const filtered = inventory.filter(item =>
+      (!search || item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search)) &&
+      (!room   || item.room === room) &&
+      (!cond   || item.condition === cond)
+    );
+    renderInventory(filtered);
+  }
+
+  // ── ADD ITEM ──────────────────────────────────────────
+
+  function generateId() {
+    const ts = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return 'INV-' + ts + rand;
+  }
+
+  async function addItem() {
+    const name     = document.getElementById('add-name').value.trim();
+    const category = document.getElementById('add-category').value.trim();
+    const room     = document.getElementById('add-room').value;
+    const condition= document.getElementById('add-condition').value;
+
+    if (!name || !room || !condition) {
+      alert('Item Name, Room, and Condition are required.');
+      return;
+    }
+
+    const id = generateId();
+    await apiAppend([id, name, category, room, condition, id]);
+    lastAddedId   = id;
+    lastAddedName = name;
+
+    // Generate QR
+    document.getElementById('qr-canvas').innerHTML = '';
+    new QRCode(document.getElementById('qr-canvas'), {
+      text: id, width: 180, height: 180,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    document.getElementById('qr-id-label').textContent = id + ' — ' + name;
+    document.getElementById('qr-display').style.display = 'block';
+
+    // Clear form
+    ['add-name', 'add-category'].forEach(id => document.getElementById(id).value = '');
+    ['add-room', 'add-condition'].forEach(id => document.getElementById(id).value = '');
+
+    await loadInventory();
+  }
+
+  function addAnother() {
+    document.getElementById('qr-display').style.display = 'none';
+    document.getElementById('add-name').focus();
+  }
+
+  function printQR() {
+    const qrDiv  = document.getElementById('qr-canvas');
+    const canvas = qrDiv.querySelector('canvas');
+    const img    = qrDiv.querySelector('img');
+    const src    = canvas ? canvas.toDataURL() : (img ? img.src : '');
+    const label  = document.getElementById('qr-id-label').textContent;
+
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><title>QR Code</title>
+      <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;font-size:13px;color:#333;}
+      img{width:220px;height:220px;display:block;} p{margin-top:12px;}</style></head>
+      <body><img src="${src}"><p>${label}</p>
+      <script>window.onload=()=>{window.print();}<\/script></body></html>`);
+    w.document.close();
+  }
+
+  // ── MODAL ─────────────────────────────────────────────
+
+  function openModal(sheetRow) {
+    const item = inventory.find(i => i.sheetRow === sheetRow);
+    if (!item) return;
+    editingRow = sheetRow;
+
+    document.getElementById('modal-item-name').textContent = item.name;
+    document.getElementById('modal-item-id').textContent   = item.id;
+    document.getElementById('modal-name').value      = item.name;
+    document.getElementById('modal-category').value  = item.category;
+    document.getElementById('modal-room').value      = item.room;
+    document.getElementById('modal-condition').value = item.condition;
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+    editingRow = null;
+  }
+
+  function handleModalClick(e) {
+    if (e.target === document.getElementById('edit-modal')) closeModal();
+  }
+
+  async function saveItem() {
+    const item     = inventory.find(i => i.sheetRow === editingRow);
+    const name     = document.getElementById('modal-name').value.trim();
+    const category = document.getElementById('modal-category').value.trim();
+    const room     = document.getElementById('modal-room').value;
+    const condition= document.getElementById('modal-condition').value;
+
+    if (!name) { alert('Item Name is required.'); return; }
+    await apiUpdate(editingRow, [item.id, name, category, room, condition, item.qr]);
+    closeModal();
+    await loadInventory();
+  }
+
+  async function deleteItem() {
+    if (!confirm('Delete this item? This cannot be undone.')) return;
+    await apiDeleteRow(editingRow);
+    closeModal();
+    await loadInventory();
+  }
+
+  // ── QR SCANNER ────────────────────────────────────────
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + tab).classList.add('active');
+    btn.classList.add('active');
+
+    if (tab === 'scan') startScanner();
+    else stopScanner();
+  }
+
+  function startScanner() {
+    if (qrScanner) return;
+    document.getElementById('qr-result').innerHTML = '';
+    qrScanner = new Html5Qrcode('qr-reader');
+    qrScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (decoded) => handleScannedQR(decoded),
+      () => {}
+    ).catch(() => {
+      document.getElementById('qr-result').innerHTML =
+        '<p style="color:var(--broken);font-size:13px;margin-top:12px;">Camera unavailable or access denied.</p>';
+    });
+  }
+
+  function stopScanner() {
+    if (qrScanner) {
+      qrScanner.stop().catch(() => {});
+      qrScanner = null;
+    }
+  }
+
+  function handleScannedQR(id) {
+    stopScanner();
+    const item = inventory.find(i => i.id === id);
+    if (!item) {
+      document.getElementById('qr-result').innerHTML =
+        `<p style="color:var(--broken);font-size:13px;margin-top:12px;">No item found with ID: ${escHtml(id)}</p>
+         <button class="btn btn-secondary" style="margin-top:10px" onclick="startScanner()">Scan Again</button>`;
+      return;
+    }
+    document.getElementById('qr-result').innerHTML =
+      `<div class="scan-found" style="margin-top:12px">
+         <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Item found</div>
+         <div style="font-weight:500;margin-bottom:2px">${escHtml(item.name)}</div>
+         <div style="font-size:12px;color:var(--text-muted)">${escHtml(item.room)} &middot; <span class="badge badge-${item.condition.toLowerCase()}">${escHtml(item.condition)}</span></div>
+       </div>
+       <div style="display:flex;gap:8px;margin-top:10px">
+         <button class="btn btn-primary" onclick="openModal(${item.sheetRow})">Edit Item</button>
+         <button class="btn btn-secondary" onclick="restartScan()">Scan Another</button>
+       </div>`;
+  }
+
+  function restartScan() {
+    document.getElementById('qr-result').innerHTML = '';
+    document.getElementById('qr-reader').innerHTML = '';
+    qrScanner = null;
+    startScanner();
+  }
+
+  // ── UTILITIES ─────────────────────────────────────────
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
