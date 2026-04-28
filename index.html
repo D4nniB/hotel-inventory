@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
   <style>
     :root {
       --bg: #0e0f13;
@@ -16,183 +16,131 @@
       --surface2: #1e2028;
       --border: #2a2d38;
       --accent: #5b8dee;
-      --accent-dim: rgba(91,141,238,0.12);
       --text: #e8eaf0;
       --text-muted: #6b7280;
       --text-dim: #9ca3af;
-      --new: #34d399;
-      --new-bg: rgba(52,211,153,0.1);
-      --good: #60a5fa;
-      --good-bg: rgba(96,165,250,0.1);
-      --fair: #fbbf24;
-      --fair-bg: rgba(251,191,36,0.1);
-      --broken: #f87171;
-      --broken-bg: rgba(248,113,113,0.1);
+      --new: #34d399;    --new-bg: rgba(52,211,153,0.1);
+      --good: #60a5fa;   --good-bg: rgba(96,165,250,0.1);
+      --fair: #fbbf24;   --fair-bg: rgba(251,191,36,0.1);
+      --broken: #f87171; --broken-bg: rgba(248,113,113,0.1);
       --radius: 6px;
       --font: 'IBM Plex Sans', sans-serif;
       --mono: 'IBM Plex Mono', monospace;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
 
-    /* ─── LOGIN ─── */
-    #login-screen {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 100vh; gap: 32px;
-    }
-    .login-box {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 48px; text-align: center; width: 360px;
-    }
+    /* LOGIN */
+    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 48px; text-align: center; width: 360px; }
     .login-logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 24px; }
     .login-box h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
     .login-box p { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; }
 
-    /* ─── APP SHELL ─── */
+    /* APP */
     #app { display: none; min-height: 100vh; }
-
-    header {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 28px; height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 50;
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
     .header-left { display: flex; align-items: center; gap: 20px; }
     .header-logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; }
-    .header-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .header-title { font-size: 14px; font-weight: 500; }
     .header-sep { color: var(--border); }
 
-    nav {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 28px; display: flex; gap: 0;
-    }
-    nav button {
-      background: transparent; border: none; color: var(--text-muted); cursor: pointer;
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      padding: 14px 18px; border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
-    }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; }
+    nav button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; padding: 14px 18px; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
     nav button:hover { color: var(--text); }
     nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-    /* ─── VIEWS ─── */
+    /* VIEWS */
     .view { display: none; padding: 28px; max-width: 1100px; margin: 0 auto; }
     .view.active { display: block; }
     .view-title { font-size: 18px; font-weight: 600; margin-bottom: 24px; }
 
-    /* ─── TOOLBAR ─── */
-    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
-    .toolbar-right { margin-left: auto; display: flex; gap: 10px; }
-
-    input[type=text], select {
+    /* INPUTS */
+    input[type=text], input[type=number], select {
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      color: var(--text); font-family: var(--font); font-size: 13px;
-      padding: 8px 12px; outline: none; transition: border-color 0.15s;
+      color: var(--text); font-family: var(--font); font-size: 13px; padding: 8px 12px;
+      outline: none; transition: border-color 0.15s;
     }
-    input[type=text]:focus, select:focus { border-color: var(--accent); }
-    input[type=text]::placeholder { color: var(--text-muted); }
+    input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--text-muted); }
     select option { background: var(--surface2); }
 
-    .search-input { min-width: 240px; }
+    /* TOOLBAR */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .search-input { min-width: 220px; }
+    .view-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-left: auto; }
+    .view-toggle button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-family: var(--font); font-size: 12px; font-weight: 500; padding: 7px 14px; transition: background 0.15s, color 0.15s; }
+    .view-toggle button.active { background: var(--surface2); color: var(--text); }
+    .item-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 
-    /* ─── TABLE ─── */
+    /* TABLE */
     .table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
-    thead th {
-      background: var(--surface2); color: var(--text-muted); font-size: 11px;
-      font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
-      padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border);
-    }
+    thead th { background: var(--surface2); color: var(--text-muted); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
     tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
     td { padding: 13px 16px; font-size: 13px; }
     td.id-col { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
-
     .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 13px; }
 
-    /* ─── BADGES ─── */
-    .badge {
-      display: inline-flex; align-items: center; padding: 3px 10px;
-      border-radius: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
-    }
+    /* ROOM VIEW */
+    .room-section { margin-bottom: 28px; }
+    .room-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+    .room-name { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .room-count { font-size: 11px; color: var(--text-muted); }
+
+    /* BADGES */
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
     .badge-new     { background: var(--new-bg);    color: var(--new); }
     .badge-good    { background: var(--good-bg);   color: var(--good); }
     .badge-fair    { background: var(--fair-bg);   color: var(--fair); }
     .badge-broken  { background: var(--broken-bg); color: var(--broken); }
 
-    /* ─── BUTTONS ─── */
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border: none; border-radius: var(--radius);
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      cursor: pointer; transition: opacity 0.15s, background 0.15s; white-space: nowrap;
-    }
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border: none; border-radius: var(--radius); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
     .btn:hover { opacity: 0.85; }
     .btn-primary   { background: var(--accent); color: #fff; }
     .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
     .btn-danger    { background: rgba(248,113,113,0.15); color: var(--broken); border: 1px solid rgba(248,113,113,0.2); }
     .btn-ghost     { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-signout   { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius); cursor: pointer; font-family: var(--font); font-size: 12px; }
 
-    /* ─── FORM CARD ─── */
-    .form-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 28px; max-width: 480px;
-    }
+    /* FORM */
+    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 28px; max-width: 480px; }
     .form-group { margin-bottom: 18px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
     label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 7px; letter-spacing: 0.05em; text-transform: uppercase; }
-    .form-card input[type=text], .form-card select { width: 100%; }
+    .form-card input, .form-card select { width: 100%; }
     .form-actions { display: flex; gap: 10px; margin-top: 24px; }
 
-    /* ─── QR DISPLAY ─── */
-    #qr-display {
-      display: none; margin-top: 24px; padding: 20px;
-      border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
-    }
-    #qr-display p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
-    #qr-canvas canvas, #qr-canvas img { border-radius: 4px; display: block; }
-    #qr-id-label { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+    /* BARCODE DISPLAY */
+    #barcode-display { display: none; margin-top: 24px; max-width: 480px; }
+    .barcode-display-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .barcode-display-header span { font-size: 14px; font-weight: 500; }
+    .barcode-scroll { max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .barcode-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .barcode-item-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .barcode-item svg { display: block; background: #fff; border-radius: 4px; padding: 6px; max-width: 100%; }
+    .barcode-id { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 8px; }
 
-    /* ─── SCAN ─── */
+    /* SCAN */
     .scan-wrap { max-width: 480px; }
     #qr-reader { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
-    #qr-reader video { border-radius: 8px; }
-    #qr-result { margin-top: 16px; }
-    .scan-found {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 16px; font-size: 13px;
-    }
+    .scan-found { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 13px; margin-top: 12px; }
 
-    /* ─── MODAL ─── */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
-      z-index: 100; align-items: center; justify-content: center;
-    }
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; padding: 28px; width: 440px; max-width: 95vw;
-    }
-    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px; width: 440px; max-width: 95vw; }
+    .modal-header { margin-bottom: 24px; }
     .modal-header h2 { font-size: 16px; font-weight: 600; }
-    .modal-id { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .modal-id { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 3px; }
     .modal .form-group { margin-bottom: 16px; }
-    .modal input[type=text], .modal select { width: 100%; }
+    .modal input, .modal select { width: 100%; }
     .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
     .modal-footer-right { display: flex; gap: 8px; }
-
-    /* ─── SIGN OUT ─── */
-    .btn-signout {
-      background: transparent; border: 1px solid var(--border); color: var(--text-muted);
-      padding: 6px 12px; border-radius: var(--radius); cursor: pointer;
-      font-family: var(--font); font-size: 12px; transition: color 0.15s, border-color 0.15s;
-    }
-    .btn-signout:hover { color: var(--text); border-color: var(--text-muted); }
-
-    /* ─── COUNT ─── */
-    .item-count { font-size: 12px; color: var(--text-muted); align-self: center; }
   </style>
 </head>
 <body>
@@ -217,11 +165,10 @@
     </div>
     <button class="btn-signout" onclick="signOut()">Sign out</button>
   </header>
-
   <nav>
     <button class="active" onclick="switchTab('inventory', this)">Inventory</button>
     <button onclick="switchTab('add', this)">Add Item</button>
-    <button onclick="switchTab('scan', this)">Scan QR</button>
+    <button onclick="switchTab('scan', this)">Scan Barcode</button>
   </nav>
 
   <!-- INVENTORY -->
@@ -235,27 +182,39 @@
         <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
         <option>Geymsla</option><option>Annað</option>
       </select>
+      <select id="filter-category" onchange="filterInventory()">
+        <option value="">All Categories</option>
+        <option>Cable</option><option>Camera</option><option>Screen</option>
+        <option>Audio Device</option><option>Video Device</option><option>Speaker</option>
+        <option>Microphone</option><option>Adapter</option>
+        <option>Computer Accessories</option><option>Computer</option>
+      </select>
       <select id="filter-condition" onchange="filterInventory()">
         <option value="">All Conditions</option>
         <option>New</option><option>Good</option><option>Fair</option><option>Broken</option>
       </select>
       <span class="item-count" id="item-count"></span>
+      <div class="view-toggle">
+        <button class="active" id="toggle-list" onclick="setInventoryView('list')">List</button>
+        <button id="toggle-room" onclick="setInventoryView('room')">By Room</button>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Item Name</th>
-            <th>Category</th>
-            <th>Room</th>
-            <th>Condition</th>
-          </tr>
-        </thead>
-        <tbody id="inventory-body">
-          <tr><td colspan="5" class="empty-state">Loading inventory...</td></tr>
-        </tbody>
-      </table>
+
+    <div id="inventory-list-view">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Item Name</th><th>Category</th><th>Room</th><th>Condition</th></tr>
+          </thead>
+          <tbody id="inventory-body">
+            <tr><td colspan="5" class="empty-state">Loading inventory...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="inventory-room-view" style="display:none">
+      <div id="room-sections"></div>
     </div>
   </div>
 
@@ -267,9 +226,21 @@
         <label>Item Name</label>
         <input type="text" id="add-name" placeholder="e.g. HDMI Cable 5m">
       </div>
-      <div class="form-group">
-        <label>Category</label>
-        <input type="text" id="add-category" placeholder="e.g. Cable, Camera, Switch, Adapter...">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="add-category">
+            <option value="">Select category...</option>
+            <option>Cable</option><option>Camera</option><option>Screen</option>
+            <option>Audio Device</option><option>Video Device</option><option>Speaker</option>
+            <option>Microphone</option><option>Adapter</option>
+            <option>Computer Accessories</option><option>Computer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="add-quantity" value="1" min="1" max="50">
+        </div>
       </div>
       <div class="form-group">
         <label>Room / Location</label>
@@ -289,24 +260,25 @@
         </select>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addItem()">Add Item &amp; Generate QR</button>
+        <button class="btn btn-primary" onclick="addItem()">Add Item &amp; Generate Barcodes</button>
       </div>
     </div>
 
-    <div id="qr-display">
-      <p>QR code generated — print and attach to the item.</p>
-      <div id="qr-canvas"></div>
-      <div id="qr-id-label"></div>
-      <div style="margin-top:14px; display:flex; gap:8px;">
-        <button class="btn btn-secondary" onclick="printQR()">Print QR Code</button>
-        <button class="btn btn-ghost" onclick="addAnother()">Add Another Item</button>
+    <div id="barcode-display">
+      <div class="barcode-display-header">
+        <span id="barcode-display-title"></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="printAllBarcodes()">Print All</button>
+          <button class="btn btn-ghost" onclick="addAnother()">Add Another</button>
+        </div>
       </div>
+      <div class="barcode-scroll" id="barcode-list"></div>
     </div>
   </div>
 
   <!-- SCAN -->
   <div id="view-scan" class="view">
-    <div class="view-title">Scan QR Code</div>
+    <div class="view-title">Scan Barcode</div>
     <div class="scan-wrap">
       <div id="qr-reader"></div>
       <div id="qr-result"></div>
@@ -318,10 +290,8 @@
 <div class="modal-overlay" id="edit-modal" onclick="handleModalClick(event)">
   <div class="modal">
     <div class="modal-header">
-      <div>
-        <h2 id="modal-item-name">Edit Item</h2>
-        <div class="modal-id" id="modal-item-id"></div>
-      </div>
+      <h2 id="modal-item-name">Edit Item</h2>
+      <div class="modal-id" id="modal-item-id"></div>
     </div>
     <div class="form-group">
       <label>Item Name</label>
@@ -329,7 +299,12 @@
     </div>
     <div class="form-group">
       <label>Category</label>
-      <input type="text" id="modal-category">
+      <select id="modal-category">
+        <option>Cable</option><option>Camera</option><option>Screen</option>
+        <option>Audio Device</option><option>Video Device</option><option>Speaker</option>
+        <option>Microphone</option><option>Adapter</option>
+        <option>Computer Accessories</option><option>Computer</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Room / Location</label>
@@ -361,13 +336,14 @@
   const SHEET_ID   = '1y7h3nNYMehxyjbvHFloS3_zQWaLH_QsK40Zfm6bWHtY';
   const SHEET_NAME = 'Sheet1';
   const SCOPE      = 'https://www.googleapis.com/auth/spreadsheets';
+  const ROOMS      = ['Háteigur','Hvammur','Gallerí','Huginn','Muninn','Ásgarður','Útgarður','Setur','Brasserie','Geymsla','Annað'];
 
-  let accessToken  = null;
-  let inventory    = [];
-  let editingRow   = null;
-  let qrScanner    = null;
-  let lastAddedId  = null;
-  let lastAddedName = null;
+  let accessToken   = null;
+  let inventory     = [];
+  let editingRow    = null;
+  let qrScanner     = null;
+  let inventoryView = 'list';
+  let lastBarcodes  = [];
 
   // ── AUTH ──────────────────────────────────────────────
 
@@ -387,8 +363,7 @@
 
   function signOut() {
     google.accounts.oauth2.revoke(accessToken, () => {
-      accessToken = null;
-      inventory = [];
+      accessToken = null; inventory = [];
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
     });
@@ -404,20 +379,20 @@
     return r.json();
   }
 
-  async function apiAppend(values) {
+  async function apiAppend(rows) {
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME + '!A:F')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A:F')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values: [values] })
+        body: JSON.stringify({ values: rows })
       }
     );
   }
 
   async function apiUpdate(row, values) {
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME + '!A' + row + ':F' + row)}?valueInputOption=RAW`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A'+row+':F'+row)}?valueInputOption=RAW`,
       {
         method: 'PUT',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -433,11 +408,7 @@
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requests: [{
-            deleteDimension: {
-              range: { sheetId: 0, dimension: 'ROWS', startIndex: row - 1, endIndex: row }
-            }
-          }]
+          requests: [{ deleteDimension: { range: { sheetId: 0, dimension: 'ROWS', startIndex: row-1, endIndex: row } } }]
         })
       }
     );
@@ -446,8 +417,8 @@
   // ── INVENTORY ─────────────────────────────────────────
 
   async function loadInventory() {
-    const data = await apiGet(SHEET_NAME + '!A:F');
-    const rows = (data.values || []).slice(1); // skip header
+    const data = await apiGet(SHEET_NAME+'!A:F');
+    const rows = (data.values || []).slice(1);
     inventory = rows.map((row, i) => ({
       sheetRow:  i + 2,
       id:        row[0] || '',
@@ -460,101 +431,182 @@
     filterInventory();
   }
 
-  function renderInventory(items) {
-    const tbody = document.getElementById('inventory-body');
-    document.getElementById('item-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  function getFiltered() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const room   = document.getElementById('filter-room').value;
+    const cat    = document.getElementById('filter-category').value;
+    const cond   = document.getElementById('filter-condition').value;
+    return inventory.filter(item =>
+      (!search || item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search)) &&
+      (!room   || item.room === room) &&
+      (!cat    || item.category === cat) &&
+      (!cond   || item.condition === cond)
+    );
+  }
 
-    if (items.length === 0) {
+  function filterInventory() {
+    const items = getFiltered();
+    document.getElementById('item-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+    if (inventoryView === 'list') renderList(items);
+    else renderByRoom(items);
+  }
+
+  function renderList(items) {
+    const tbody = document.getElementById('inventory-body');
+    if (!items.length) {
       tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No items found</td></tr>';
       return;
     }
     tbody.innerHTML = items.map(item => {
-      const cond = (item.condition || '').toLowerCase();
-      return `
-        <tr onclick="openModal(${item.sheetRow})">
-          <td class="id-col">${escHtml(item.id)}</td>
-          <td>${escHtml(item.name)}</td>
-          <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
-          <td>${escHtml(item.room)}</td>
-          <td><span class="badge badge-${cond}">${escHtml(item.condition)}</span></td>
-        </tr>
-      `;
+      const c = (item.condition || '').toLowerCase();
+      return `<tr onclick="openModal(${item.sheetRow})">
+        <td class="id-col">${escHtml(item.id)}</td>
+        <td>${escHtml(item.name)}</td>
+        <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
+        <td>${escHtml(item.room)}</td>
+        <td><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
+      </tr>`;
     }).join('');
   }
 
-  function filterInventory() {
-    const search = document.getElementById('search-input').value.toLowerCase();
-    const room   = document.getElementById('filter-room').value;
-    const cond   = document.getElementById('filter-condition').value;
+  function renderByRoom(items) {
+    const container = document.getElementById('room-sections');
+    const grouped = {};
+    items.forEach(item => {
+      const r = item.room || 'Annað';
+      if (!grouped[r]) grouped[r] = [];
+      grouped[r].push(item);
+    });
 
-    const filtered = inventory.filter(item =>
-      (!search || item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search)) &&
-      (!room   || item.room === room) &&
-      (!cond   || item.condition === cond)
-    );
-    renderInventory(filtered);
+    const orderedRooms = ROOMS.filter(r => grouped[r]);
+    Object.keys(grouped).forEach(r => { if (!ROOMS.includes(r)) orderedRooms.push(r); });
+
+    if (!orderedRooms.length) {
+      container.innerHTML = '<div class="empty-state">No items found</div>';
+      return;
+    }
+
+    container.innerHTML = orderedRooms.map(room => {
+      const roomItems = grouped[room];
+      const rows = roomItems.map(item => {
+        const c = (item.condition || '').toLowerCase();
+        return `<tr onclick="openModal(${item.sheetRow})">
+          <td class="id-col">${escHtml(item.id)}</td>
+          <td>${escHtml(item.name)}</td>
+          <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
+          <td><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
+        </tr>`;
+      }).join('');
+      return `<div class="room-section">
+        <div class="room-header">
+          <span class="room-name">${escHtml(room)}</span>
+          <span class="room-count">${roomItems.length} item${roomItems.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Item Name</th><th>Category</th><th>Condition</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function setInventoryView(mode) {
+    inventoryView = mode;
+    document.getElementById('toggle-list').classList.toggle('active', mode === 'list');
+    document.getElementById('toggle-room').classList.toggle('active', mode === 'room');
+    document.getElementById('inventory-list-view').style.display = mode === 'list' ? '' : 'none';
+    document.getElementById('inventory-room-view').style.display = mode === 'room' ? '' : 'none';
+    filterInventory();
   }
 
   // ── ADD ITEM ──────────────────────────────────────────
 
   function generateId() {
-    const ts = Date.now().toString(36).toUpperCase();
-    const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return 'INV-' + ts + rand;
+    return 'INV-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2,5).toUpperCase();
   }
 
   async function addItem() {
-    const name     = document.getElementById('add-name').value.trim();
-    const category = document.getElementById('add-category').value.trim();
-    const room     = document.getElementById('add-room').value;
-    const condition= document.getElementById('add-condition').value;
+    const name      = document.getElementById('add-name').value.trim();
+    const category  = document.getElementById('add-category').value;
+    const room      = document.getElementById('add-room').value;
+    const condition = document.getElementById('add-condition').value;
+    const qty       = Math.max(1, Math.min(50, parseInt(document.getElementById('add-quantity').value) || 1));
 
     if (!name || !room || !condition) {
       alert('Item Name, Room, and Condition are required.');
       return;
     }
 
-    const id = generateId();
-    await apiAppend([id, name, category, room, condition, id]);
-    lastAddedId   = id;
-    lastAddedName = name;
+    const rows = [];
+    const generated = [];
+    for (let i = 0; i < qty; i++) {
+      await new Promise(r => setTimeout(r, 6)); // ensure unique timestamps
+      const id = generateId();
+      generated.push({ id, name });
+      rows.push([id, name, category, room, condition, id]);
+    }
 
-    // Generate QR
-    document.getElementById('qr-canvas').innerHTML = '';
-    new QRCode(document.getElementById('qr-canvas'), {
-      text: id, width: 180, height: 180,
-      colorDark: '#000000', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.H
-    });
-    document.getElementById('qr-id-label').textContent = id + ' — ' + name;
-    document.getElementById('qr-display').style.display = 'block';
+    await apiAppend(rows);
+    lastBarcodes = generated;
 
-    // Clear form
-    ['add-name', 'add-category'].forEach(id => document.getElementById(id).value = '');
-    ['add-room', 'add-condition'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('barcode-display-title').textContent =
+      qty === 1 ? '1 barcode generated' : `${qty} barcodes generated — print and attach to each item`;
+    renderBarcodes(generated);
+    document.getElementById('barcode-display').style.display = 'block';
+
+    document.getElementById('add-name').value = '';
+    document.getElementById('add-category').value = '';
+    document.getElementById('add-room').value = '';
+    document.getElementById('add-condition').value = '';
+    document.getElementById('add-quantity').value = '1';
 
     await loadInventory();
   }
 
-  function addAnother() {
-    document.getElementById('qr-display').style.display = 'none';
-    document.getElementById('add-name').focus();
+  function renderBarcodes(barcodes) {
+    const list = document.getElementById('barcode-list');
+    list.innerHTML = barcodes.map((b, i) =>
+      `<div class="barcode-item">
+        <div class="barcode-item-label">${escHtml(b.name)}</div>
+        <svg id="bc-svg-${i}"></svg>
+        <div class="barcode-id">${escHtml(b.id)}</div>
+      </div>`
+    ).join('');
+
+    setTimeout(() => {
+      barcodes.forEach((b, i) => {
+        JsBarcode(`#bc-svg-${i}`, b.id, {
+          format: 'CODE128', lineColor: '#000', background: '#fff',
+          width: 2, height: 70, displayValue: true, fontSize: 12, margin: 8
+        });
+      });
+    }, 50);
   }
 
-  function printQR() {
-    const qrDiv  = document.getElementById('qr-canvas');
-    const canvas = qrDiv.querySelector('canvas');
-    const img    = qrDiv.querySelector('img');
-    const src    = canvas ? canvas.toDataURL() : (img ? img.src : '');
-    const label  = document.getElementById('qr-id-label').textContent;
+  function printAllBarcodes() {
+    const svgBlocks = lastBarcodes.map((b, i) => {
+      const el = document.getElementById(`bc-svg-${i}`);
+      if (!el) return '';
+      const svgData = new XMLSerializer().serializeToString(el);
+      const encoded = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      return `<div style="break-inside:avoid;margin-bottom:24px;text-align:center">
+        <img src="${encoded}" style="display:block;margin:0 auto">
+        <p style="margin-top:6px;font-family:monospace;font-size:11px;color:#555">${b.id} — ${b.name}</p>
+      </div>`;
+    }).join('');
 
     const w = window.open('', '_blank');
-    w.document.write(`<!DOCTYPE html><html><head><title>QR Code</title>
-      <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;font-size:13px;color:#333;}
-      img{width:220px;height:220px;display:block;} p{margin-top:12px;}</style></head>
-      <body><img src="${src}"><p>${label}</p>
-      <script>window.onload=()=>{window.print();}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><title>Barcodes</title>
+      <style>body{margin:32px;font-family:sans-serif;} @media print{body{margin:16px}}</style></head>
+      <body>${svgBlocks}<script>window.onload=()=>window.print()<\/script></body></html>`);
     w.document.close();
+  }
+
+  function addAnother() {
+    document.getElementById('barcode-display').style.display = 'none';
+    document.getElementById('add-name').focus();
   }
 
   // ── MODAL ─────────────────────────────────────────────
@@ -563,7 +615,6 @@
     const item = inventory.find(i => i.sheetRow === sheetRow);
     if (!item) return;
     editingRow = sheetRow;
-
     document.getElementById('modal-item-name').textContent = item.name;
     document.getElementById('modal-item-id').textContent   = item.id;
     document.getElementById('modal-name').value      = item.name;
@@ -583,12 +634,11 @@
   }
 
   async function saveItem() {
-    const item     = inventory.find(i => i.sheetRow === editingRow);
-    const name     = document.getElementById('modal-name').value.trim();
-    const category = document.getElementById('modal-category').value.trim();
-    const room     = document.getElementById('modal-room').value;
-    const condition= document.getElementById('modal-condition').value;
-
+    const item      = inventory.find(i => i.sheetRow === editingRow);
+    const name      = document.getElementById('modal-name').value.trim();
+    const category  = document.getElementById('modal-category').value;
+    const room      = document.getElementById('modal-room').value;
+    const condition = document.getElementById('modal-condition').value;
     if (!name) { alert('Item Name is required.'); return; }
     await apiUpdate(editingRow, [item.id, name, category, room, condition, item.qr]);
     closeModal();
@@ -602,14 +652,13 @@
     await loadInventory();
   }
 
-  // ── QR SCANNER ────────────────────────────────────────
+  // ── SCANNER ───────────────────────────────────────────
 
   function switchTab(tab, btn) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
     document.getElementById('view-' + tab).classList.add('active');
     btn.classList.add('active');
-
     if (tab === 'scan') startScanner();
     else stopScanner();
   }
@@ -620,8 +669,8 @@
     qrScanner = new Html5Qrcode('qr-reader');
     qrScanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decoded) => handleScannedQR(decoded),
+      { fps: 10, qrbox: { width: 400, height: 120 }, formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128] },
+      (decoded) => handleScannedBarcode(decoded),
       () => {}
     ).catch(() => {
       document.getElementById('qr-result').innerHTML =
@@ -630,31 +679,29 @@
   }
 
   function stopScanner() {
-    if (qrScanner) {
-      qrScanner.stop().catch(() => {});
-      qrScanner = null;
-    }
+    if (qrScanner) { qrScanner.stop().catch(() => {}); qrScanner = null; }
   }
 
-  function handleScannedQR(id) {
+  function handleScannedBarcode(id) {
     stopScanner();
     const item = inventory.find(i => i.id === id);
     if (!item) {
       document.getElementById('qr-result').innerHTML =
-        `<p style="color:var(--broken);font-size:13px;margin-top:12px;">No item found with ID: ${escHtml(id)}</p>
-         <button class="btn btn-secondary" style="margin-top:10px" onclick="startScanner()">Scan Again</button>`;
+        `<p style="color:var(--broken);font-size:13px;margin-top:12px;">No item found: ${escHtml(id)}</p>
+         <button class="btn btn-secondary" style="margin-top:10px" onclick="restartScan()">Scan Again</button>`;
       return;
     }
+    const c = (item.condition || '').toLowerCase();
     document.getElementById('qr-result').innerHTML =
-      `<div class="scan-found" style="margin-top:12px">
-         <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Item found</div>
-         <div style="font-weight:500;margin-bottom:2px">${escHtml(item.name)}</div>
-         <div style="font-size:12px;color:var(--text-muted)">${escHtml(item.room)} &middot; <span class="badge badge-${item.condition.toLowerCase()}">${escHtml(item.condition)}</span></div>
-       </div>
-       <div style="display:flex;gap:8px;margin-top:10px">
-         <button class="btn btn-primary" onclick="openModal(${item.sheetRow})">Edit Item</button>
-         <button class="btn btn-secondary" onclick="restartScan()">Scan Another</button>
-       </div>`;
+      `<div class="scan-found">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Item found</div>
+        <div style="font-weight:500;margin-bottom:4px">${escHtml(item.name)}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${escHtml(item.category)} &middot; ${escHtml(item.room)} &middot; <span class="badge badge-${c}">${escHtml(item.condition)}</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary" onclick="openModal(${item.sheetRow})">Edit Item</button>
+        <button class="btn btn-secondary" onclick="restartScan()">Scan Another</button>
+      </div>`;
   }
 
   function restartScan() {
@@ -667,11 +714,7 @@
   // ── UTILITIES ─────────────────────────────────────────
 
   function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
 </body>
