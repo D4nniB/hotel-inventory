@@ -705,6 +705,7 @@
     if (tab === 'scan') startScanner();
     else stopScanner();
     if (tab === 'move') renderMoveView();
+    if (tab === 'inventory') loadInventory();
   }
 
   document.addEventListener('dragover', e => {
