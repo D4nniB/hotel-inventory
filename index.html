@@ -762,99 +762,183 @@
 
   // ── MOVE ITEMS ────────────────────────────────────────
 
-  let moveDragItem = null; // { id, name, category, room, sheetRow, el }
+  let moveDragItem = null;
   const moveGhost  = document.getElementById('move-ghost');
 
   function renderMoveView() {
-    const list = document.getElementById('move-item-list');
-    list.innerHTML = '';
+    const itemList = document.getElementById('move-item-list');
+    itemList.innerHTML = '';
 
-    // Reset all room rows
+    // Reset all room rows to empty
     document.querySelectorAll('.move-room-row').forEach(row => {
-      const chips = row.querySelector('.move-chips');
-      chips.innerHTML = '<span class="move-drop-hint">Drop here</span>';
+      row.querySelector('.move-chips').innerHTML = '';
+      row.querySelector('.move-drop-hint').style.display = '';
       row.classList.remove('drop-active');
     });
 
     if (!inventory.length) {
-      list.innerHTML = '<div class="move-empty">No items in inventory</div>';
+      itemList.innerHTML = '<div class="move-empty">No items in inventory</div>';
       return;
     }
 
     inventory.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'move-item';
-      el.draggable = true;
-      el.dataset.sheetRow = item.sheetRow;
-      el.innerHTML = `
-        <span class="move-drag-handle">&#8942;&#8942;</span>
-        <div class="move-item-info">
-          <div class="move-item-name">${escHtml(item.name)}</div>
-          <div class="move-item-meta">${escHtml(item.category)} &middot; currently in ${escHtml(item.room || '—')}</div>
-        </div>`;
-
-      el.addEventListener('dragstart', e => {
-        moveDragItem = { ...item, el };
-        el.classList.add('is-dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        moveGhost.textContent = item.name;
-        moveGhost.style.display = 'block';
-      });
-      el.addEventListener('dragend', () => {
-        el.classList.remove('is-dragging');
-        moveGhost.style.display = 'none';
-      });
-
-      list.appendChild(el);
+      if (item.room) {
+        // Place into the correct room row
+        const roomRow = document.querySelector(`.move-room-row[data-room="${CSS.escape(item.room)}"]`);
+        if (roomRow) {
+          addChipToRoom(roomRow, item);
+        } else {
+          // Room not in list (e.g. Geymsla from old data) — put on left
+          addItemToLeft(itemList, item);
+        }
+      } else {
+        addItemToLeft(itemList, item);
+      }
     });
 
-    // Room drop zones
-    document.querySelectorAll('.move-room-row').forEach(row => {
-      row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drop-active'); });
-      row.addEventListener('dragleave', () => row.classList.remove('drop-active'));
-      row.addEventListener('drop', e => {
-        e.preventDefault();
-        row.classList.remove('drop-active');
-        if (!moveDragItem) return;
+    if (!itemList.children.length) {
+      itemList.innerHTML = '<div class="move-empty">All items placed</div>';
+    }
 
-        const newRoom = row.dataset.room;
-        const item    = moveDragItem;
-        moveDragItem  = null;
+    // Attach drop listeners to left list
+    attachLeftDropZone(itemList);
 
-        // Remove from left list
-        item.el.remove();
-        if (!document.getElementById('move-item-list').children.length) {
-          document.getElementById('move-item-list').innerHTML = '<div class="move-empty">All items placed</div>';
-        }
+    // Attach drop listeners to all room rows
+    document.querySelectorAll('.move-room-row').forEach(row => attachRoomDropZone(row));
+  }
 
-        // Hide drop hint
-        const hint = row.querySelector('.move-drop-hint');
-        if (hint) hint.style.display = 'none';
+  function makeDraggable(el, item) {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => {
+      moveDragItem = { ...item, el };
+      el.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      moveGhost.textContent = item.name;
+      moveGhost.style.display = 'block';
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('is-dragging');
+      moveGhost.style.display = 'none';
+    });
+  }
 
-        // Add full item row to chips area
-        const chips = row.querySelector('.move-chips');
-        const chip = document.createElement('div');
-        chip.className = 'move-chip';
-        chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><span class="move-chip-name">${escHtml(item.name)}</span><span class="move-chip-cat">${escHtml(item.category)}</span>`;
-        chips.appendChild(chip);
+  function addItemToLeft(container, item) {
+    const el = document.createElement('div');
+    el.className = 'move-item';
+    el.dataset.sheetRow = item.sheetRow;
+    el.innerHTML = `
+      <span class="move-drag-handle">&#8942;&#8942;</span>
+      <div class="move-item-info">
+        <div class="move-item-name">${escHtml(item.name)}</div>
+        <div class="move-item-meta">${escHtml(item.category)}</div>
+      </div>`;
+    makeDraggable(el, item);
+    container.appendChild(el);
+  }
 
-        // Saving indicator in header
+  function addChipToRoom(roomRow, item) {
+    const chips = roomRow.querySelector('.move-chips');
+    const hint  = roomRow.querySelector('.move-drop-hint');
+    if (hint) hint.style.display = 'none';
+
+    const chip = document.createElement('div');
+    chip.className = 'move-chip';
+    chip.dataset.sheetRow = item.sheetRow;
+    chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><span class="move-chip-name">${escHtml(item.name)}</span><span class="move-chip-cat">${escHtml(item.category)}</span>`;
+    makeDraggable(chip, item);
+    chips.appendChild(chip);
+  }
+
+  function saveItemRoom(item, newRoom) {
+    // Update local state immediately
+    const inv = inventory.find(i => i.sheetRow === item.sheetRow);
+    if (inv) inv.room = newRoom;
+
+    // Find the header of whichever room row contains this item, show saving
+    const allRoomRows = document.querySelectorAll('.move-room-row');
+    let savingEl = null;
+    allRoomRows.forEach(row => {
+      const chip = row.querySelector(`.move-chip[data-sheet-row="${item.sheetRow}"]`);
+      if (chip) {
         const header = row.querySelector('.move-room-header');
-        const saving = document.createElement('span');
-        saving.className = 'move-saving';
-        saving.textContent = 'Saving...';
-        header.appendChild(saving);
-        apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr])
-          .then(() => {
-            saving.remove();
-            const inv = inventory.find(i => i.sheetRow === item.sheetRow);
-            if (inv) inv.room = newRoom;
-          })
-          .catch(() => {
-            saving.textContent = 'Save failed';
-            saving.style.color = 'var(--broken)';
-          });
+        savingEl = document.createElement('span');
+        savingEl.className = 'move-saving';
+        savingEl.textContent = 'Saving...';
+        header.appendChild(savingEl);
+      }
+    });
+
+    apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr])
+      .then(() => { if (savingEl) savingEl.remove(); })
+      .catch(() => { if (savingEl) { savingEl.textContent = 'Save failed'; savingEl.style.color = 'var(--broken)'; } });
+  }
+
+  function attachRoomDropZone(row) {
+    row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drop-active'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drop-active'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drop-active');
+      if (!moveDragItem) return;
+
+      const newRoom = row.dataset.room;
+      const item    = moveDragItem;
+      moveDragItem  = null;
+
+      // Remove from wherever it came from
+      item.el.remove();
+
+      // Check if left list is now empty
+      const itemList = document.getElementById('move-item-list');
+      if (!itemList.children.length) {
+        itemList.innerHTML = '<div class="move-empty">All items placed</div>';
+      }
+
+      // Update hint visibility for the old room (in case it's now empty)
+      document.querySelectorAll('.move-room-row').forEach(r => {
+        const chips = r.querySelector('.move-chips');
+        const hint  = r.querySelector('.move-drop-hint');
+        if (hint) hint.style.display = chips.children.length === 0 ? '' : 'none';
       });
+
+      // Add to new room
+      addChipToRoom(row, { ...item, room: newRoom });
+      saveItemRoom(item, newRoom);
+    });
+  }
+
+  function attachLeftDropZone(itemList) {
+    itemList.addEventListener('dragover', e => { e.preventDefault(); itemList.style.outline = '1px dashed var(--accent)'; });
+    itemList.addEventListener('dragleave', () => itemList.style.outline = '');
+    itemList.addEventListener('drop', e => {
+      e.preventDefault();
+      itemList.style.outline = '';
+      if (!moveDragItem) return;
+
+      const item   = moveDragItem;
+      moveDragItem = null;
+
+      // Only act if it came from a room (has a room assigned)
+      if (!item.room) return;
+
+      // Remove from room
+      item.el.remove();
+
+      // Update hint visibility for affected room
+      document.querySelectorAll('.move-room-row').forEach(r => {
+        const chips = r.querySelector('.move-chips');
+        const hint  = r.querySelector('.move-drop-hint');
+        if (hint) hint.style.display = chips.children.length === 0 ? '' : 'none';
+      });
+
+      // Clear "All items placed" message if present
+      const empty = itemList.querySelector('.move-empty');
+      if (empty) empty.remove();
+
+      // Add back to left with no room
+      const updatedItem = { ...item, room: '' };
+      addItemToLeft(itemList, updatedItem);
+      saveItemRoom(item, '');
     });
   }
 
