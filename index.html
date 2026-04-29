@@ -270,16 +270,6 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Room / Location</label>
-        <select id="add-room">
-          <option value="">Select room...</option>
-          <option>Háteigur</option><option>Hvammur</option><option>Gallerí</option>
-          <option>Huginn</option><option>Muninn</option><option>Ásgarður</option>
-          <option>Útgarður</option><option>Setur</option><option>Brasserie</option>
-          <option>Annað</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label>Condition</label>
         <select id="add-condition">
           <option value="">Select condition...</option>
@@ -585,22 +575,21 @@
   async function addItem() {
     const name      = document.getElementById('add-name').value.trim();
     const category  = document.getElementById('add-category').value;
-    const room      = document.getElementById('add-room').value;
     const condition = document.getElementById('add-condition').value;
     const qty       = Math.max(1, Math.min(50, parseInt(document.getElementById('add-quantity').value) || 1));
 
-    if (!name || !room || !condition) {
-      alert('Item Name, Room, and Condition are required.');
+    if (!name || !condition) {
+      alert('Item Name and Condition are required.');
       return;
     }
 
     const rows = [];
     const generated = [];
     for (let i = 0; i < qty; i++) {
-      await new Promise(r => setTimeout(r, 6)); // ensure unique timestamps
+      await new Promise(r => setTimeout(r, 6));
       const id = generateId();
       generated.push({ id, name });
-      rows.push([id, name, category, room, condition, id]);
+      rows.push([id, name, category, '', condition, id]);
     }
 
     await apiAppend(rows);
@@ -613,7 +602,6 @@
 
     document.getElementById('add-name').value = '';
     document.getElementById('add-category').value = '';
-    document.getElementById('add-room').value = '';
     document.getElementById('add-condition').value = '';
     document.getElementById('add-quantity').value = '1';
 
