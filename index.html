@@ -140,6 +140,12 @@
     .move-item:active { cursor: grabbing; }
     .move-item.is-dragging { opacity: 0.25; }
     .move-item.is-selected { border-color: var(--accent); background: rgba(91,141,238,0.1); }
+    .move-item.is-danni { border-color: #ad8e66; }
+    .move-item.is-danni .move-item-name { color: #ad8e66; }
+    .move-chip.is-danni { border-color: #ad8e66; }
+    .move-chip.is-danni .move-chip-name { color: #ad8e66; }
+    .danni-dot { width: 7px; height: 7px; border-radius: 50%; background: #ad8e66; flex-shrink: 0; display: inline-block; }
+    td.danni-name { color: #ad8e66; font-weight: 500; }
     .move-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .move-select-hint { font-size: 11px; color: var(--text-muted); }
     .move-drag-handle { color: var(--text-muted); font-size: 13px; flex-shrink: 0; }
@@ -281,6 +287,10 @@
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addItem()">Add Item &amp; Generate Barcodes</button>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-muted);text-transform:none;letter-spacing:0;margin:0">
+          <input type="checkbox" id="add-owner" style="width:auto;accent-color:#ad8e66">
+          <span style="color:#ad8e66;font-weight:500">Danni's item</span>
+        </label>
       </div>
     </div>
 
@@ -435,7 +445,7 @@
 
   async function apiAppend(rows) {
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A:F')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A:G')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -446,7 +456,7 @@
 
   async function apiUpdate(row, values) {
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A'+row+':F'+row)}?valueInputOption=RAW`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME+'!A'+row+':G'+row)}?valueInputOption=RAW`,
       {
         method: 'PUT',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -471,7 +481,7 @@
   // ── INVENTORY ─────────────────────────────────────────
 
   async function loadInventory() {
-    const data = await apiGet(SHEET_NAME+'!A:F');
+    const data = await apiGet(SHEET_NAME+'!A:G');
     const rows = (data.values || []).slice(1);
     inventory = rows.map((row, i) => ({
       sheetRow:  i + 2,
@@ -480,7 +490,8 @@
       category:  row[2] || '',
       room:      row[3] || '',
       condition: row[4] || '',
-      qr:        row[5] || ''
+      qr:        row[5] || '',
+      owner:     row[6] || ''
     }));
     filterInventory();
   }
@@ -513,9 +524,10 @@
     }
     tbody.innerHTML = items.map(item => {
       const c = (item.condition || '').toLowerCase();
+      const isDanni = item.owner === 'Danni';
       return `<tr onclick="openModal(${item.sheetRow})">
         <td class="id-col">${escHtml(item.id)}</td>
-        <td>${escHtml(item.name)}</td>
+        <td ${isDanni ? 'class="danni-name"' : ''}>${isDanni ? '<span class="danni-dot" style="margin-right:7px;vertical-align:middle"></span>' : ''}${escHtml(item.name)}</td>
         <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
         <td>${escHtml(item.room)}</td>
         <td><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
@@ -544,9 +556,10 @@
       const roomItems = grouped[room];
       const rows = roomItems.map(item => {
         const c = (item.condition || '').toLowerCase();
+        const isDanni = item.owner === 'Danni';
         return `<tr onclick="openModal(${item.sheetRow})">
           <td class="id-col">${escHtml(item.id)}</td>
-          <td>${escHtml(item.name)}</td>
+          <td ${isDanni ? 'class="danni-name"' : ''}>${isDanni ? '<span class="danni-dot" style="margin-right:7px;vertical-align:middle"></span>' : ''}${escHtml(item.name)}</td>
           <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
           <td><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
         </tr>`;
@@ -586,6 +599,7 @@
     const category  = document.getElementById('add-category').value;
     const condition = document.getElementById('add-condition').value;
     const qty       = Math.max(1, Math.min(50, parseInt(document.getElementById('add-quantity').value) || 1));
+    const owner     = document.getElementById('add-owner').checked ? 'Danni' : '';
 
     if (!name || !condition) {
       alert('Item Name and Condition are required.');
@@ -598,7 +612,7 @@
       await new Promise(r => setTimeout(r, 6));
       const id = generateId();
       generated.push({ id, name });
-      rows.push([id, name, category, '', condition, id]);
+      rows.push([id, name, category, '', condition, id, owner]);
     }
 
     await apiAppend(rows);
@@ -613,6 +627,7 @@
     document.getElementById('add-category').value = '';
     document.getElementById('add-condition').value = '';
     document.getElementById('add-quantity').value = '1';
+    document.getElementById('add-owner').checked = false;
 
     await loadInventory();
   }
@@ -692,7 +707,7 @@
     const room      = document.getElementById('modal-room').value;
     const condition = document.getElementById('modal-condition').value;
     if (!name) { alert('Item Name is required.'); return; }
-    await apiUpdate(editingRow, [item.id, name, category, room, condition, item.qr]);
+    await apiUpdate(editingRow, [item.id, name, category, room, condition, item.qr, item.owner]);
     closeModal();
     await loadInventory();
   }
@@ -866,7 +881,7 @@
 
   function addItemToLeft(container, item) {
     const el = document.createElement('div');
-    el.className = 'move-item';
+    el.className = 'move-item' + (item.owner === 'Danni' ? ' is-danni' : '');
     el.dataset.sheetRow = item.sheetRow;
     el.innerHTML = `
       <span class="move-drag-handle">&#8942;&#8942;</span>
@@ -884,7 +899,7 @@
     if (hint) hint.style.display = 'none';
 
     const chip = document.createElement('div');
-    chip.className = 'move-chip';
+    chip.className = 'move-chip' + (item.owner === 'Danni' ? ' is-danni' : '');
     chip.dataset.sheetRow = item.sheetRow;
     chip.innerHTML = `<span class="move-drag-handle">&#8942;&#8942;</span><span class="move-chip-name">${escHtml(item.name)}</span><span class="move-chip-cat">${escHtml(item.category)}</span>`;
     makeDraggable(chip, item);
@@ -902,7 +917,7 @@
   function saveItemRoom(item, newRoom) {
     const inv = inventory.find(i => i.sheetRow === item.sheetRow);
     if (inv) inv.room = newRoom;
-    return apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr]);
+    return apiUpdate(item.sheetRow, [item.id, item.name, item.category, newRoom, item.condition, item.qr, item.owner || '']);
   }
 
   function refreshHints() {
