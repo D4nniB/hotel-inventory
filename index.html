@@ -239,7 +239,13 @@
         <option value="">All Conditions</option>
         <option>New</option><option>Good</option><option>Fair</option><option>Broken</option>
       </select>
+      <select id="sort-order" onchange="filterInventory()">
+        <option value="">Sort: Default</option>
+        <option value="az">Name A–Z</option>
+        <option value="za">Name Z–A</option>
+      </select>
       <span class="item-count" id="item-count"></span>
+      <button class="btn btn-secondary" id="print-barcodes-btn" style="display:none" onclick="printSelectedBarcodes()">Print Barcodes (<span id="print-count">0</span>)</button>
       <div class="view-toggle">
         <button class="active" id="toggle-list" onclick="setInventoryView('list')">List</button>
         <button id="toggle-room" onclick="setInventoryView('room')">By Room</button>
@@ -250,7 +256,10 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>ID</th><th>Item Name</th><th>Category</th><th>Room</th><th>Condition</th></tr>
+            <tr>
+              <th style="width:36px"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this)" style="accent-color:var(--accent);cursor:pointer"></th>
+              <th>ID</th><th>Item Name</th><th>Category</th><th>Room</th><th>Condition</th>
+            </tr>
           </thead>
           <tbody id="inventory-body">
             <tr><td colspan="5" class="empty-state">Loading inventory...</td></tr>
@@ -528,17 +537,56 @@
     filterInventory();
   }
 
+  let selectedForPrint = new Set(); // sheetRow values
+
+  function updatePrintBtn() {
+    const n = selectedForPrint.size;
+    const btn = document.getElementById('print-barcodes-btn');
+    const cnt = document.getElementById('print-count');
+    if (btn) { btn.style.display = n > 0 ? '' : 'none'; if (cnt) cnt.textContent = n; }
+  }
+
+  function toggleSelectAll(cb) {
+    const rows = document.querySelectorAll('#inventory-body .row-cb');
+    rows.forEach(r => {
+      r.checked = cb.checked;
+      const row = parseInt(r.dataset.sheetRow);
+      if (cb.checked) selectedForPrint.add(row);
+      else selectedForPrint.delete(row);
+    });
+    updatePrintBtn();
+  }
+
+  function toggleRowSelect(cb) {
+    const row = parseInt(cb.dataset.sheetRow);
+    if (cb.checked) selectedForPrint.add(row);
+    else selectedForPrint.delete(row);
+    // Update select-all state
+    const allCbs = document.querySelectorAll('#inventory-body .row-cb');
+    const allChecked = [...allCbs].every(c => c.checked);
+    const selectAllCb = document.getElementById('select-all-cb');
+    if (selectAllCb) selectAllCb.checked = allChecked && allCbs.length > 0;
+    updatePrintBtn();
+  }
+
   function getFiltered() {
     const search = document.getElementById('search-input').value.toLowerCase();
     const room   = document.getElementById('filter-room').value;
     const cat    = document.getElementById('filter-category').value;
     const cond   = document.getElementById('filter-condition').value;
-    return inventory.filter(item =>
+    const sort   = document.getElementById('sort-order').value;
+
+    let items = inventory.filter(item =>
       (!search || item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search)) &&
       (!room   || item.room === room) &&
       (!cat    || item.category === cat) &&
       (!cond   || item.condition === cond)
     );
+
+    if (sort === 'az') items = [...items].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'za') items = [...items].sort((a, b) => b.name.localeCompare(a.name));
+
+    return items;
   }
 
   function filterInventory() {
@@ -551,20 +599,26 @@
   function renderList(items) {
     const tbody = document.getElementById('inventory-body');
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No items found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No items found</td></tr>';
       return;
     }
+    const selectAllCb = document.getElementById('select-all-cb');
+    if (selectAllCb) selectAllCb.checked = false;
+
     tbody.innerHTML = items.map(item => {
       const c = (item.condition || '').toLowerCase();
       const isDanni = item.owner === 'Danni';
-      return `<tr onclick="openModal(${item.sheetRow})">
-        <td class="id-col">${escHtml(item.id)}</td>
-        <td ${isDanni ? 'class="danni-name"' : ''}>${isDanni ? '<span class="danni-dot" style="margin-right:7px;vertical-align:middle"></span>' : ''}${escHtml(item.name)}</td>
-        <td style="color:var(--text-muted)">${escHtml(item.category)}</td>
-        <td>${escHtml(item.room)}</td>
-        <td><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
+      const checked = selectedForPrint.has(item.sheetRow) ? 'checked' : '';
+      return `<tr>
+        <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" data-sheet-row="${item.sheetRow}" ${checked} onchange="toggleRowSelect(this)" style="accent-color:var(--accent);cursor:pointer"></td>
+        <td class="id-col" onclick="openModal(${item.sheetRow})">${escHtml(item.id)}</td>
+        <td ${isDanni ? 'class="danni-name"' : ''} onclick="openModal(${item.sheetRow})">${isDanni ? '<span class="danni-dot" style="margin-right:7px;vertical-align:middle"></span>' : ''}${escHtml(item.name)}</td>
+        <td style="color:var(--text-muted)" onclick="openModal(${item.sheetRow})">${escHtml(item.category)}</td>
+        <td onclick="openModal(${item.sheetRow})">${escHtml(item.room)}</td>
+        <td onclick="openModal(${item.sheetRow})"><span class="badge badge-${c}">${escHtml(item.condition)}</span></td>
       </tr>`;
     }).join('');
+    updatePrintBtn();
   }
 
   function renderByRoom(items) {
@@ -1035,6 +1089,57 @@
         console.error('Save failed', err);
       }
     });
+  }
+
+  // ── BARCODE REPRINT ───────────────────────────────────
+
+  function printSelectedBarcodes() {
+    const items = [...selectedForPrint]
+      .map(row => inventory.find(i => i.sheetRow === row))
+      .filter(Boolean);
+    if (!items.length) return;
+
+    // Build a hidden SVG for each item, serialize, then open print window
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(container);
+
+    const svgs = items.map((item, i) => {
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgEl.id = `reprint-svg-${i}`;
+      container.appendChild(svgEl);
+      JsBarcode(`#reprint-svg-${i}`, item.id, {
+        format: 'CODE128', lineColor: '#000', background: '#fff',
+        width: 2, height: 60, displayValue: true, fontSize: 11, margin: 8
+      });
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const encoded = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      return { encoded, name: item.name, id: item.id };
+    });
+
+    document.body.removeChild(container);
+
+    const blocks = svgs.map(s => `
+      <div class="label">
+        <div class="item-name">${s.name}</div>
+        <img src="${s.encoded}">
+        <div class="item-id">${s.id}</div>
+      </div>`).join('');
+
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><title>Barcodes</title>
+      <style>
+        body { margin: 16px; font-family: sans-serif; }
+        .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+        .label { border: 1px solid #ddd; border-radius: 4px; padding: 10px 12px; text-align: center; break-inside: avoid; }
+        .item-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #111; }
+        .item-id { font-size: 10px; color: #777; font-family: monospace; margin-top: 4px; }
+        img { display: block; margin: 0 auto; }
+        @media print { body { margin: 8px; } }
+      </style></head>
+      <body><div class="grid">${blocks}</div>
+      <script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
   }
 
   // ── UTILITIES ─────────────────────────────────────────
